@@ -1,0 +1,15 @@
+{
+  "name": "lolpops",
+  "version": "1.0.0",
+  "description": "Lolpops NFT collection",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "nft",
+    "solidity"
+  ],
+  "author": "Valerio Di Napoli",
+  "license": "MIT"
+}
