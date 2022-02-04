@@ -11,5 +11,8 @@
     "solidity"
   ],
   "author": "Valerio Di Napoli",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.4.2"
+  }
 }

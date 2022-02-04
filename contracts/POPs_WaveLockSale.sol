@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
-import "../tokens/IERC20.sol";
-import "../tokens/IERC721Enumerable.sol";
-import "../utils/Ownable.sol";
-import "../utils/ReentrancyGuard.sol";
+import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../node_modules/@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface Minter {
   function mint(address to, uint256 tokenId) external;
