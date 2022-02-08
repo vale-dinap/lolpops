@@ -5,9 +5,10 @@ pragma solidity ^0.8.0;
 import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../node_modules/@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface Minter {
+interface Minter { //// Initialize interface to interact with minter contract
   function mint(address to, uint256 tokenId) external;
 }
 
@@ -15,7 +16,7 @@ interface Minter {
 contract POPSWaveLockMintSale is Ownable, ReentrancyGuard {
   // Contract Variables
   address public nft;
-  uint256 constant BASE = 10**18;
+  uint256 constant BASE = 10**18; //// Not used
   uint256 public price;
   uint256 public amountForSale;
   uint256 public amountSold;
