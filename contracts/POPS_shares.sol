@@ -2,9 +2,9 @@
 
 /*
 This token represents the amount of shares that each team member has. When a POPS NFT is sold, each token holder receives a revenue
-proportional to the amount of tokens. The total supply is 10'000, so the address holding 1000 token will receive 10% of the revenues,
-the address holding 750 tokens will receive 7.5% of the revenues and so on. By using this approach, shareholders are free to move their
-shares among their wallet, or even trade them.
+proportional to the amount of tokens. The total supply is 10'000, so the address holding 1000 tokens will receive 10% of the revenues,
+the address holding 750 tokens will receive 7.5% of the revenues and so on. By using this approach, shareholders are free to transfer/split
+their shares among their wallets, or even trade/gift them.
 */
 
 pragma solidity ^0.8.0;
