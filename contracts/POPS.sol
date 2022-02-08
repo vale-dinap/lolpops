@@ -42,7 +42,7 @@ contract lolpops is Ownable, ERC721Enumerable {
     saleContract = _saleContract;  //// Assign the argument address to saleContract
   }
 
-  function renounceMinting() public onlyOwner onlyIfMintingEnabled { //// This overrides the contract addresses variables with zeroes, so that minting is no longer possible
+  function renounceMinting() public onlyOwner onlyIfMintingEnabled { //// This disables minting forever
     saleContract = address(0);
     extraContract = address(0);
     mintingDisabled = true;
