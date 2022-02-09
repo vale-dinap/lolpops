@@ -81,7 +81,7 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
         emit Received(msg.sender, msg.value);
     }
 
-    // This allows to claim the accrued dividends
+    // Claim the accrued dividends
     function claimDividends() public whenNotPaused nonReentrant returns(bool){
         require(dividends[msg.sender]>0, "This address has no dividends to claim");
         uint256 value = dividends[msg.sender];
@@ -91,12 +91,12 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
         return sent;
     }
 
-    // This allows to pause the contract
+    // Pause the contract
     function pauseContract() public onlyOwner {
         _pause();
     }
 
-    // This allows to unpause the contract
+    // Unpause the contract
     function unpauseContract() public onlyOwner {
         _unpause();
     }
