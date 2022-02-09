@@ -13,8 +13,8 @@ import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract POPsShares is ERC20 {
 
-    event addedShareholder(address indexed shareHolder, address[] shareholderList);
-    event removedShareholder(address indexed shareHolder, address[] shareholderList);
+    event AddedShareholder(address indexed shareHolder, address[] shareholderList);
+    event RemovedShareholder(address indexed shareHolder, address[] shareholderList);
 
     address[] shareholders;
     mapping (address => bool) isShareholder;
@@ -46,7 +46,7 @@ contract POPsShares is ERC20 {
             shareholderIndex[newShareholder] = shareholders.length; // Store shareholder's index in array
             shareholders.push(newShareholder);  // Append shareholder's address to array
             isShareholder[newShareholder]=true; // Flag the address as a shareholder
-            emit addedShareholder(newShareholder, shareholders);
+            emit AddedShareholder(newShareholder, shareholders);
             added=true;
         }
         else{ added=false; }
@@ -58,7 +58,7 @@ contract POPsShares is ERC20 {
             shareholderIndex[ shareholders[ shareholders.length - 1 ] ] = shareholderIndex[shareholder]; // Update index of the array item being "moved"
             shareholders.pop(); // Remove last array item
             isShareholder[shareholder] = false; // Flag address removed from array as NOT a shareholder
-            emit removedShareholder(shareholder, shareholders);
+            emit RemovedShareholder(shareholder, shareholders);
             removed = true;
         }
         else{ removed=false; } // Do noyhing if not a shareholder
