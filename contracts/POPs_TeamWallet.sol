@@ -2,7 +2,7 @@
 
 // Each team member will receive an amount of tokens representing his/her shares
 // On each NFT sale, earnings will be paid proportionally to the amount of share tokens held
-// 10000 shares equal to 100% of the revenues, 100 shares equal to 1% and so on
+// 100 shares (actually 10000 - with 2 decimal digits) equal to 100% of the revenues, 1 share equal to 1% and so on
 
 pragma solidity ^0.8.0;
 
@@ -11,10 +11,11 @@ import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-interface POPshares {
+interface POPSsharesI {
         function listShareholders() view external returns(address[] memory);
         function countShareholders() view external returns(uint256);
         function balanceOf(address _address) view external returns(uint256);
+        function decimals() view external returns(uint8);
 }
 
 contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
@@ -23,10 +24,10 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
     event Claimed(address indexed, uint);
 
     using SafeMath for uint256;
-    
+
     address public immutable sharesTokenContract; // Address of the shares token contract
     mapping (address => uint256) dividends; // This stores the unclaimed dividends for each shareholder
-
+    
     constructor(address _sharesToken) Ownable() Pausable() ReentrancyGuard() {
         sharesTokenContract = _sharesToken;
     }
@@ -43,41 +44,50 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
 
     // Get current amount of shareholders
     function countShareholders() view internal returns(uint){
-        return POPshares(sharesTokenContract).countShareholders();
+        return POPSsharesI(sharesTokenContract).countShareholders();
     }
 
     // Get full list of shareholders (addresses)
-    function listShareholders() view internal returns(address[] memory){
-        return POPshares(sharesTokenContract).listShareholders();
+    function listShareholders() view public returns(address[] memory){
+        return POPSsharesI(sharesTokenContract).listShareholders();
     }
 
     // Get amount of shares of the given shareholder
-    function getShares(address _shareholder) view internal returns(uint256){
-        return POPshares(sharesTokenContract).balanceOf(_shareholder);
+    function getShares(address _shareholder) view public returns(uint256){
+        return POPSsharesI(sharesTokenContract).balanceOf(_shareholder);
     }
 
     // Calculate dividend proportional to shares
     function calculateDividend(address shareholder, uint256 value) view internal returns(uint256 dividend){
-        dividend = value.mul(getShares(shareholder)).div(10000);
+        dividend = value.mul(getShares(shareholder)).div(100 * 10 ** POPSsharesI(sharesTokenContract).decimals());
     }
 
-    // This is used when a payment is received, the amount is distributed amongst the shareholders
+    // Distribute dividends amongst the shareholders
     function distributeDividends(uint256 value) internal returns(bool){
-        require(value>0);
-        uint256 distributed;
-        for(uint256 i=0; i<countShareholders(); i++){
-            address shareholder = listShareholders()[i];
-            uint256 dividend = calculateDividend(shareholder, value);
-            dividends[shareholder] += dividend;
-            distributed += dividend;
+        if(value>0){
+            uint256 distributed;
+            for(uint256 i=0; i<countShareholders(); i++){
+                address shareholder = listShareholders()[i];
+                uint256 dividend = calculateDividend(shareholder, value);
+                dividends[shareholder] += dividend;
+                distributed += dividend;
+            }
+            assert(distributed <= value);
+            return true;
         }
-        assert(distributed <= value);
+        else{return false;}
+    }
+
+    // Process incoming payments
+    function processPayment(uint256 value) internal nonReentrant returns(bool){
+        require(value>0, "Attempting to pay zero eth");
+        distributeDividends(value);
         return true;
     }
 
-    // This handles incoming payments
+    // Fallback for incoming payments
     receive() external payable {
-        distributeDividends(msg.value);
+        processPayment(msg.value);
         emit Received(msg.sender, msg.value);
     }
 
