@@ -33,12 +33,12 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
     }
 
     // Get the total unclaimed dividends (aka contract's balance)
-    function totalUnclaimedDividends() view public returns(uint256){
+    function totalAccruedDividends() view public returns(uint256){
         return address(this).balance;
     }
 
     // Get the unclaimed dividends of the given shareholder
-    function unclaimedDividends(address shareholder) view public returns(uint256){
+    function accruedDividends(address shareholder) view public returns(uint256){
         return dividends[shareholder];
     }
 
