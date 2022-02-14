@@ -5,15 +5,19 @@ pragma solidity ^0.8.0;
 import "../node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import './ERC2981/ERC2981ContractWideRoyalties.sol';
 
 interface SaleContract {  //// Initialize the interface required to run the sale contract from the contract "WaveLockSale"
   function loadSale(uint256 saleCount, uint256 swapCount, uint256 lpCount) external;
 }
 
-contract lolpops is Ownable, ERC721Enumerable {
+contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
+
+  address immutable POPS_teamWallet;
   address public saleContract;  //// Initialize variable holding the sale contract address
   /* WHAT IS THIS USED FOR? */ address public extraContract;  //// Initialize variable holding the extra contract address
 
+  //uint256 nextTokenId; ----- TO DO: CHECK IF NEEDED OR ALREADY IMPLEMENTED IN BASE CONTRACT
   uint256 public immutable MAX_POPS;  //// Define the limit of mintable NFTs - the value will be set via constructor
 
   string public POPS_PROVENANCE = "";
@@ -28,9 +32,23 @@ contract lolpops is Ownable, ERC721Enumerable {
     _;
   }
 
-  constructor(string memory _name, string memory _symbol, uint256 maxSupply) Ownable() ERC721(_name, _symbol) { //// Constructor required to implement ERC721 - also implementing Ownership functoinality
+  constructor(string memory _name, string memory _symbol, uint256 maxSupply, address _POPS_teamWallet) Ownable() ERC721(_name, _symbol) { //// Constructor required to implement ERC721 - also implementing Ownership functoinality
     MAX_POPS = maxSupply; //// Also setting the max supply
+    POPS_teamWallet = _POPS_teamWallet; //// Storing team wallet contract address
+    _setRoyalties(POPS_teamWallet, 200); //// Setting royalties (between 0 and 10000) to be sent to team wallet address (only for NFT marketplaces that support ERC2981) - set to 200 (corrensponding to 2%) as default
   }
+
+
+  ///	ERC2981 (royalties) IMPLEMENTATION
+  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC2981Base) returns (bool){
+    return super.supportsInterface(interfaceId);
+  }
+  //// This only allows to modify the royalties, but not their beneficiary (which is the team wallet)
+  function setRoyalties(uint256 value) public onlyOwner {
+    require(value <= 2500, "Attempting to set royalties higher than 25% - don't be so greedy");
+    _setRoyalties(POPS_teamWallet, value);
+  }
+
 
   function mint(address to, uint256 tokenId) public virtual onlyIfMintingEnabled {
     require(msg.sender == saleContract, "Nice try lol"); //// Makes sure that only the sale contract can run this function
