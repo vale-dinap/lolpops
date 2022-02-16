@@ -7,8 +7,8 @@ dest_folder = "C:\\Users\\valer\\Desktop\\LOLPOPS\\LOLPOPS\\JSON"
 verbose = False
 
 nft_data_name = "Lolpop"
-nft_data_description = "This will be the description"
-nft_data_image = "this is the path"
+nft_data_description = "LOLPOPs is a collection of 10,000 procedurally generated NFTs that live in perpetuity on the Ethereum Blockchain. LOLPOPs owners will have early and exclusive access to future NFT claims, allowlists, special raffles, community giveaways, POPVERSE games and more. Let's get it poppin' in here! Visit [www.lolpopsnft.art](https://www.lolpopsnft.art/) to learn more!"
+nft_data_image = "this will be replaced by the IPFS path"
 
 def formatMetadata(id, name, description, image, attributes):
     metadata={"name":name+" #"+str(id), "description":description, "image":image, "attributes":attributes}
@@ -29,7 +29,9 @@ def fetchAttributes(csv_file):
                     if x==0:
                         pass
                     else:
-                        rowDict.append({"trait_type":header[x].capitalize(),"value":noneEval( row[0].replace(" ", "").split(";")[x].capitalize() ) })
+                        value = row[0].replace(" ", "").split(";")[x].capitalize()
+                        if(value != "None"):
+                            rowDict.append({"trait_type":header[x].capitalize(),"value":noneEval( value ) })
                 data.update({ iter:formatMetadata(iter, nft_data_name, nft_data_description, nft_data_image, rowDict) })
             iter+=1
         #print(header)
