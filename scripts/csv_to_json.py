@@ -1,11 +1,18 @@
 ### This helps extracting from the LOLPOPS csv a sequence of json files containing the attributes of each NFT ###
 
-import json
-import csv
+import json, csv
 
 csv_file = "C:\\Users\\valer\\Desktop\\LOLPOPS\\final_lolpops_SHUFFLE.csv"
-dest_folder = "C:\\Users\\valer\\Desktop\\LOLPOPS\\LOLPOPS\\JSON_ATTRIBUTES"
+dest_folder = "C:\\Users\\valer\\Desktop\\LOLPOPS\\LOLPOPS\\JSON"
 verbose = False
+
+nft_data_name = "Lolpop"
+nft_data_description = "This will be the description"
+nft_data_image = "this is the path"
+
+def formatMetadata(id, name, description, image, attributes):
+    metadata={"name":name+" #"+str(id), "description":description, "image":image, "attributes":attributes}
+    return metadata
 
 def fetchAttributes(csv_file):
     with open(csv_file, newline='', encoding='utf-8') as open_file:
@@ -23,7 +30,7 @@ def fetchAttributes(csv_file):
                         pass
                     else:
                         rowDict.append({"trait_type":header[x].capitalize(),"value":noneEval( row[0].replace(" ", "").split(";")[x].capitalize() ) })
-                data.update({iter:{"attributes": rowDict}})
+                data.update({ iter:formatMetadata(iter, nft_data_name, nft_data_description, nft_data_image, rowDict) })
             iter+=1
         #print(header)
         #print(data)
@@ -36,9 +43,8 @@ def noneEval(in_string):
         return in_string
 
 def writeJson(formatted_dict, dest_file):
-    data_to_write = json.dumps(formatted_dict)
     with open(dest_file, 'w') as json_file:
-        json.dump(formatted_dict, json_file, indent=4, sort_keys=True)
+        json.dump(formatted_dict, json_file, indent=4, sort_keys=False)
 
 def makeJson(csv_file, dest_folder):
     data = fetchAttributes(csv_file)
