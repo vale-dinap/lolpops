@@ -36,9 +36,10 @@ async function setURI(basePath, id, cid) {
 
 async function uploadAll(base_path, iterations){
     for(let i=1;i<=iterations;i++){
+        console.log("Working on image "+i+" of "+iterations+", "+Number(i)/Number(iterations)+"% completed")
         let cid = await store(base_path, i);
         setURI(base_path, i, cid);
     }
 }
 
-uploadAll(basePath, 100)
+uploadAll(basePath, 1000)
