@@ -17,11 +17,11 @@ def removeHttp(url):
 def extract_URI_to_csv(json_folder, dest_csv_file, iterations):
     with open(dest_csv_file, mode='w') as csv_file:
         data = csv.writer(csv_file, dialect='excel', delimiter=';', quotechar='"', lineterminator="\n")
-        data.writerow(["id", "URI", "View path"])
+        data.writerow(["id", "cid", "URI"])
         for i in range(1, iterations+1, 1):
             source_file = json_folder+"\\"+str(i)+".json"
             URI = getURIfromJson(source_file).replace(" ", "").replace("\n", "")
             #print(URI)
             data.writerow([str(i), removeHttp(URI), URI])
 
-extract_URI_to_csv(json_folder, dest_csv_file, 5)
+extract_URI_to_csv(json_folder, dest_csv_file, 10000)
