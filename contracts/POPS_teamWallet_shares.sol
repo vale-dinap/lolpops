@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 /*
-Each team member will receive an amount of tokens representing his/her shares. When a POPS NFT is sold,
-each token holder receives a revenue proportional to the amount of tokens. The total supply is 100 (actually
-10000, with 2 decimals), so the address holding 10 tokens will receive 10% of the revenues, the address holding 7.5 tokens will receive 7.5% of the revenues and so on.
-By using this approach, shareholders are free to transfer their shares to other wallets (or even trade them),
-the new holders will automatically receive the dividends
-from that time on.
+Team members will receive an amount of tokens representing their shares. When a POPS NFT is sold, each
+token holder receives a revenue proportional to the amount of tokens. The total supply is 100 (actually
+10000, with 2 decimals), so the address holding 10 tokens will receive 10% of the revenues, the address
+holding 7.5 tokens will receive 7.5% of the revenues and so on. By using this approach, shareholders
+are free to transfer their shares to other wallets (or even trade them), the new holders will
+automatically start earing the dividends from new earnings as soon as they receive the tokens.
 */
 
 pragma solidity ^0.8.0;
