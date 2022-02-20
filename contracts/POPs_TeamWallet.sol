@@ -11,7 +11,7 @@ import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-interface POPSsharesI {
+interface IPOPSshares {
         function listShareholders() view external returns(address[] memory);
         function countShareholders() view external returns(uint256);
         function balanceOf(address _address) view external returns(uint256);
@@ -25,9 +25,10 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
 
     using SafeMath for uint256;
 
-    address public immutable sharesTokenContract; // Address of the shares token contract
-    mapping (address => uint256) dividends; // This stores the unclaimed dividends for each shareholder
-    
+    address public immutable sharesTokenContract;                                // Shares token contract address
+    mapping (address => uint256) dividends;                                      // Accrued dividends for each shareholder
+    uint256 dividends_to_distribute;
+
     constructor(address _sharesToken) Ownable() Pausable() ReentrancyGuard() {
         sharesTokenContract = _sharesToken;
     }
@@ -44,25 +45,25 @@ contract POPSwallet is Ownable, Pausable, ReentrancyGuard {
 
     // Get current amount of shareholders
     function countShareholders() view internal returns(uint){
-        return POPSsharesI(sharesTokenContract).countShareholders();
+        return IPOPSshares(sharesTokenContract).countShareholders();
     }
 
     // Get full list of shareholders (addresses)
     function listShareholders() view public returns(address[] memory){
-        return POPSsharesI(sharesTokenContract).listShareholders();
+        return IPOPSshares(sharesTokenContract).listShareholders();
     }
 
     // Get amount of shares of the given shareholder
     function getShares(address _shareholder) view public returns(uint256){
-        return POPSsharesI(sharesTokenContract).balanceOf(_shareholder);
+        return IPOPSshares(sharesTokenContract).balanceOf(_shareholder);
     }
 
     // Calculate dividend proportional to shares
     function calculateDividend(address shareholder, uint256 value) view internal returns(uint256 dividend){
-        dividend = value.mul(getShares(shareholder)).div(100 * 10 ** POPSsharesI(sharesTokenContract).decimals());
+        dividend = value.mul(getShares(shareholder)).div(100 * 10 ** IPOPSshares(sharesTokenContract).decimals());
     }
 
-    // Distribute dividends amongst the shareholders
+    // Distribute dividends
     function distributeDividends(uint256 value) internal returns(bool){
         if(value>0){
             uint256 distributed;
