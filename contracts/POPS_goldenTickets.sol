@@ -11,7 +11,7 @@ import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 
-interface POPSI{
+interface IPOPS{
     function MAX_POPS() view external returns(uint256);
 }
 
@@ -19,9 +19,9 @@ contract POPSgoldenTickets is ERC20, Ownable, Pausable {
 
     // EVENTS
 
-    event TicketsMinted(address indexed, uint16);
-    event TicketsBurned(address indexed, uint16);
-    event TicketMintingRenounced();
+    event minted(address indexed, uint16);
+    event redeemed(address indexed, uint16);
+    event mintingRenounced();
 
 
     // STATE VARIABLES
@@ -63,7 +63,7 @@ contract POPSgoldenTickets is ERC20, Ownable, Pausable {
 
     /*
     function availablePOPS() view internal returns(uint256){ ///// IF I IMPLEMENT A SIMILAR FUNCTION IN THE SALE CONTRACT, I CAN FETCH THE DATA FROM THERE AND AVOID IMPORTING THE POPS CONTRACT IN THIS CONTRACT
-        uint256 POPSmax = POPSI(POPS_contract).MAX_POPS();
+        uint256 POPSmax = IPOPS(POPS_contract).MAX_POPS();
         uint256 POPSsold = 1; ///// FUNCTION TO FETCH THE AMOUNT OF POPS BEEN SOLD - 1 is a temporary placeholder to prevent errors from the compiler
         uint256 POPSavailable; ///actual math: "max - sold;" - leaving this out to avoid compiler errors while I write the rest
         return POPSavailable;
@@ -77,20 +77,20 @@ contract POPSgoldenTickets is ERC20, Ownable, Pausable {
     function mintTickets(address recipient, uint16 amount) public onlyOwner whenNotPaused ifMintingEnabled returns (bool){
         require(amount <= availablePOPS(), "Attempting to mint a number of tickets greater than the amount of redeemable POPS");
         _mint(recipient, amount);
-        emit TicketsMinted(recipient, amount);
+        emit minted(recipient, amount);
         return true;
     }
     */
 
-    function burnTickets(address account, uint16 amount) external onlyPOPSsaleContract whenNotPaused returns (bool){
+    function redeemTickets(address account, uint16 amount) external onlyPOPSsaleContract whenNotPaused returns (bool){
         _burn(account, amount);
-        emit TicketsBurned(account, amount);
+        emit redeemed(account, amount);
         return true;
     }
 
     function renounceMinting() public onlyOwner whenNotPaused ifMintingEnabled {
         mintingEnabled=false;
-        emit TicketMintingRenounced();
+        emit mintingRenounced();
     }
 
 }
