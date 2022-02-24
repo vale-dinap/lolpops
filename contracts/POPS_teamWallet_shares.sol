@@ -59,7 +59,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     // Add new shareholder
-    function addShareholder(address newShareholder) internal returns(bool added){
+    function addShareholder(address newShareholder) private returns(bool added){
         if(!isShareholder[newShareholder]){                                                              // Do if not a shareholder yet
             shareholderIndex[newShareholder] = shareholders.length;                                      // Store shareholder's index in array
             shareholders.push(newShareholder);                                                           // Append shareholder's address to array
@@ -72,7 +72,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     // Remove shareholder from database
-    function removeShareholder(address shareholder) internal returns(bool removed){
+    function removeShareholder(address shareholder) private returns(bool removed){
         if(isShareholder[shareholder]){                                                                  // Execute if the address is a shareholder
             shareholders[ shareholderIndex[shareholder] ] = shareholders[ shareholders.length - 1 ];     // Override item to delete with last item in array (address)
             shares[ shareholderIndex[shareholder] ] = shares[ shareholders.length - 1 ];                 // Override item to delete with last item in array (balance)
@@ -112,12 +112,12 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     // Calculate dividend proportional to shares
-    function calculateDividend(address shareholder, uint256 value) view internal returns(uint256 dividend){
+    function calculateDividend(address shareholder, uint256 value) view private returns(uint256 dividend){
         dividend = value.mul(balanceOf(shareholder)).div(100 * 10 ** decimals());
     }
 
     // Distribute dividends
-    function distributeDividends() internal returns(bool){
+    function distributeDividends() private returns(bool){
         if(dividendsToDistribute>0){
             uint256 dividendsToDistribute_before = dividendsToDistribute;                                // Used at the end to check invariances
             uint256 distributed;                                                                         // Keeps the count of dividends distributed in the for loop below
