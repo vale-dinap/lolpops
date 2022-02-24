@@ -8,10 +8,15 @@ import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import './ERC2981/ERC2981ContractWideRoyalties.sol';
 
 ///// TO_DO: Add events
+///// TO_DO: integrate final provenance proofs
 ///// SALE CONTRACT INTERFACE ///// ----- TO_DO: CHECK IF STILL NEEDED AS IT IS
 
 interface SaleContract {  // Initialize the interface required to run the sale contract from the contract "WaveLockSale"
   function loadSale(uint256 saleCount, uint256 swapCount, uint256 lpCount) external;
+}
+
+interface TeamWallet {
+  function listShareholders() external view returns(address[] memory);
 }
 
 contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
@@ -34,7 +39,9 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   bool public minting_disabled = false;                                           // Once disabled, it is forever
   bool public baseURI_locked = false;                                             // Once locked, it is forever
   bool public provenanceData_locked = false;                                      // Once locked, it is forever
-  bool public royalties_locked = false;                                           // Once locked, it is forever
+  // Team Wallet address change request                                           // In case of emergency, Owner can request to amend the address payments are sent to, however the whole team must sign.
+  address candidateTeamWallet = address(0);                                       // Candidate address
+  address[] candidateTeamWallet_signatories;                                      // Team members required to sign
 
 
   ///// MODIFIERS /////
@@ -49,18 +56,13 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
     _;
   }
 
-  modifier ifRoyaltiesNotLocked{                                                  // Can avoid using functions if royalties have been locked
-    require(!royalties_locked, "Royalties data have been permanently locked");
-    _;
-  }
-
 
   ///// CONSTRUCTOR /////
 
   constructor(string memory _name, string memory _symbol, uint256 maxSupply, address _POPS_teamWallet) Ownable() ERC721(_name, _symbol) {
     MAX_POPS = maxSupply;                                                         // Setting the max supply (IMMUTABLE)
     POPS_teamWallet = _POPS_teamWallet;                                           // Storing team wallet contract address
-    _setRoyalties(POPS_teamWallet, 250);                                          // Setting to 250 (corrensponding to 2.5%)
+    _setRoyalties(POPS_teamWallet, 375);                                          // Setting to 375 (corrensponding to 3.75%)
   }
 
 
@@ -72,12 +74,12 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   }
 
   function mint(address to, uint256 tokenId) external virtual ifMintingEnabled {
-    require(msg.sender == saleContract, "Only the sale contract is allowed to mint");
+    require(msg.sender == POPS_saleContract, "Only the sale contract is allowed to mint");
     _safeMint(to, tokenId);
   }
 
   function renounceMinting() public onlyOwner ifMintingEnabled {                  // Warning: disables minting forever
-    saleContract = address(0);
+    POPS_saleContract = address(0);
     minting_disabled = true;
   }
 
@@ -87,23 +89,15 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
     super._safeMint(to, tokenId);
   }
 
-  // Reserve POPS for the team -------> TO_DO: CHECK IF STILL NEEDED <----------------------------------------------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  function reservePOPS(uint16 _amount) public onlyOwner onlyIfMintingEnabled {
-    uint supply = totalSupply();
-    for (uint16 i = 0; i < _amount; i++) {
-      _safeMint(msg.sender, supply + uint256(i));
-    }
-  }
-
 
   ///// PROVENANCE FUNCTIONS /////
 
-  function setProvenanceHash(string memory imageFilesHash, string memory imageCIDsHash) public onlyOwner {
+  function setProvenance(string memory imageFilesHash, string memory imageCIDsHash) public onlyOwner {
     require(!provenanceData_locked, "The provenance hash has been locked forever");
-    if(imageFilesHash != ""){POPS_provenanceHash_imageFiles = imageFilesHash;}
-    if(imageCIDsHash != ""){POPS_provenanceHash_imageFileCIDs = imageCIDsHash;}
+    POPS_provenanceHash_imageFiles = imageFilesHash;
+    POPS_provenanceHash_imageFileCIDs = imageCIDsHash;
   }
-  function lockProvenanceHash() public onlyOwner{                                 // Lock provenance data forever
+  function lockProvenance() public onlyOwner{                                     // Lock provenance data forever
     require(!provenanceData_locked, "The provenance hash is already locked");
     provenanceData_locked=true;
   }
@@ -144,23 +138,50 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
     return _cumulativeHODL;
   }
 
-
-  ///// TEAM WALLET FUNCTIONS /////
-  //TO DO: add functions to change the teamWallet address to redirect sale revenues in the emergency case that something goes really badly (also consider a multiSig approach)
-  // IF THESE ARE NOT IMPLEMENTED, FLAG TEAMWALLET VARIABLE AS IMMUTABLE
-
+  
   ///// ROYALTIES FUNCTIONS /////
   // (these only apply where ERC2981 is supported)
 
   function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC2981Base) returns (bool){
     return super.supportsInterface(interfaceId);                                  // ERC2981 IMPLEMENTATION
   }
-  function setRoyalties(uint256 value) public onlyOwner ifRoyaltiesNotLocked {    // Set the royalties (owned by POPS_teamWallet)
-    require(value <= 1250, "Attempting to set royalties higher than 12.5% - don't be a greedy ass");
-    _setRoyalties(POPS_teamWallet, value);
+
+
+  ///// TEAM WALLET EMERGENCY FUNCTIONS /////
+  // Candidate new team wallet
+  function teamWalletChange_setCandidate(address _newAddress) public onlyOwner {  // Only Owner can request this
+    require (_newAddress != POPS_teamWallet);                                     // Ensure a new address is being proposed
+    candidateTeamWallet = _newAddress;
+    candidateTeamWallet_signatories = TeamWallet(POPS_teamWallet).listShareholders();
+    removeAddressItem(candidateTeamWallet_signatories, msg.sender);               // Remove Owner from signatories (Owner's signature is implicit)
   }
-  function lockRoyalties() public onlyOwner ifRoyaltiesNotLocked {                // Lock royalties forever
-    royalties_locked=true;
+  // Shows current candidate
+  function teamWalletChange_getCandidate() view public returns(address){          // Show the current candidate
+    return (candidateTeamWallet);
+  }
+  // Show addresses required to sign in order to perform the change               // Show the addresses required to sign in order to perform the change
+  function teamWalletChange_requiredSignatories() view public returns(address[] memory){
+    return(candidateTeamWallet_signatories);
+  }
+  // Approve candidate
+  function teamWalletChange_approve() public {
+    require(candidateTeamWallet != address(0) && candidateTeamWallet!=POPS_teamWallet);
+    if(!removeAddressItem(candidateTeamWallet_signatories, msg.sender)){ revert("Sender is not allowed to sign or has already signed"); }
+    if(candidateTeamWallet_signatories.length == 0){                              // If no signatories are left to sign,
+      POPS_teamWallet = candidateTeamWallet;                                      // perform the change
+      _setRoyalties(candidateTeamWallet, 375);                                    // Also update the royalties address
+    }
+  }
+  // Remove List Item
+  function removeAddressItem(address[] storage _list, address _item) internal returns(bool success){
+    for(uint i=0; i<_list.length; i++){
+      if(_item == _list[i]){
+        _list[i]=_list[_list.length-1];
+        _list.pop();
+        success=true;
+        break;
+      }
+    }
   }
 
 }
