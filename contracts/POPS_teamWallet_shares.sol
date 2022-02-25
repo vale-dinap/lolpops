@@ -74,8 +74,8 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     // Remove shareholder from database
     function removeShareholder(address shareholder) private returns(bool removed){
         if(isShareholder[shareholder]){                                                                  // Execute if the address is a shareholder
-            shareholders[ shareholderIndex[shareholder] ] = shareholders[ shareholders.length - 1 ];     // Override item to delete with last item in array (address)
-            shares[ shareholderIndex[shareholder] ] = shares[ shareholders.length - 1 ];                 // Override item to delete with last item in array (balance)
+            shareholders[ shareholderIndex[shareholder] ] = shareholders[ shareholders.length - 1 ];     // Override item to be deleted with last item in array (address)
+            shares[ shareholderIndex[shareholder] ] = shares[ shareholders.length - 1 ];                 // Override item to be deleted with last item in array (balance)
             shareholderIndex[ shareholders[ shareholders.length - 1 ] ] = shareholderIndex[shareholder]; // Update index of the array item being "moved"
             shareholders.pop();                                                                          // Remove last array item (address array)
             shares.pop();                                                                                // Remove last array item (balance array)
