@@ -4,6 +4,8 @@
 
 pragma solidity ^0.8.0;
 
+////// TODO: delete/hide test functions, consider increasing buffer of  addresses, create a function to return the currently assigned ID and minting time for current address
+
 contract MintingRandomizer{
 
     // VARIABLES
@@ -12,7 +14,7 @@ contract MintingRandomizer{
     uint8 private nextMinterId = 0;                                                                // Each of the last 3 minters is assigned an id from 0 to 2 (used cyclically)
     uint256[10] private mintableIds = [0,1,2,3,4,5,6,7,8,9];                                       // Initialize the array containing the final metadata ids, this is randomized at each draw
     uint256 private nextMintableId=10;                                                             // Value that will replace the just-minted ID in the mintableId array
-    mapping(uint256 => uint256) internal minterRequestBlock;                                       // Keeps track of when a minter has requested a draw
+    mapping(uint256 => uint256) internal minterRequestBlock;                                       // Keeps track of when a minter has requested a draw // TODO: consider moving to derived contract
 
 
     // FUNCTIONS - Main logics
