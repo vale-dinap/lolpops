@@ -11,7 +11,7 @@ contract Whitelist{
     mapping(address => uint256) private whitelistAllowance;
     uint256 private whitelistTotalAllowance;
 
-    // Tests have demonstrated that a combinaton of for loop and explicitly repeated commands is the most efficient (and cheap in terms of gas) way to loop through thousands of addresses
+    // Tests have demonstrated that a combinaton of for loop and explicitly repeated commands is the most efficient (and less gas-consuming) way to loop through thousands of addresses
     // For ~2500 addresses, looping through 16 repeated lines has proven to give the best results
     function batchWhitelist(address[] calldata _addresses, uint256 _allowance) internal virtual returns(bool){
         uint256 remainder = _addresses.length%16;
