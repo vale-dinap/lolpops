@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
-import "../node_modules/@openzeppelin/contracts/utils/Timers.sol";
+import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./Whitelist.sol";
 import "./MintingRandomizer.sol";
 
@@ -15,23 +15,38 @@ import "./MintingRandomizer.sol";
 interface IPOPS{
     function mint(address to, uint256 tokenId) external;
     function updateRoyaltiesOwner(address newAddress) external;
+    function totalSupply() view external returns(uint256);
 }
 
 interface TeamWallet {
   function listShareholders() external view returns(address[] memory);
 }
 
-contract POPSsale is Ownable, Pausable, Whitelist, MintingRandomizer{
+interface GoldenTicket {
+  function balanceOf(address account) external view returns(uint256);
+}
 
+contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRandomizer{
+
+
+    ///// CONTRACT VARIABLES /////
+
+    // Addresses
     address payable POPS_teamWallet;
-    address immutable POPS_address;
-
-    uint8 whitelistValidity = 4; ///// 4 days - convert to blocks or use block.timestamp
+    address public immutable POPS_address;
+    address public immutable POPS_goldenTicket;
+    // Whitelist and golden tickets
+    uint256 goldenTicketValidity = 2 days;
+    uint256 whitelistValidity = 4 days;
     uint8 whitelistAllowance = 2;
-    uint8 goldenTicketValidity = 2; ///// 2 days
-    uint256[6] priceCurve = [80000000000000000, 83000000000000000, 90000000000000000,
-                            103000000000000000, 121000000000000000, 144000000000000000];                            // In WEI
-    uint16[6] priceStep   = [0, 1801, 3601, 5401, 7201, 9001];                                                      // Sold pieces required to unlock next price
+    // Price
+    uint16 priceStep = 1800;                                                                                        // Price increase every N sales
+    uint256[6] priceCurve = [0.08 ether, 0.083 ether, 0.09 ether, 0.103 ether, 0.121 ether, 0.144 ether];           // Prices have been pre-calculated algorithmically and hardcoded to reduce gas usage
+    // Time
+    uint256 public saleStartTime;
+    uint256 public saleDuration;
+    // Permissions
+    bool public minting_disabled = false;                                                                           // Once disabled, it is forever
 
     mapping(uint256 => bool) minted;
     uint256 requestId;
@@ -40,9 +55,53 @@ contract POPSsale is Ownable, Pausable, Whitelist, MintingRandomizer{
     address candidateTeamWallet = address(0);                                                                       // Candidate address
     address[] candidateTeamWallet_signatories;                                                                      // Team members required to sign
 
-    constructor(address _POPS, address payable _teamWallet){
+
+    ///// CONSTRUCTOR /////
+
+    constructor(address _POPS, address payable _teamWallet, address _goldenTicket){
         POPS_address = _POPS;
         POPS_teamWallet = _teamWallet;
+        POPS_goldenTicket = _goldenTicket;
+    }
+
+
+    ///// MODIFIERS /////
+
+    modifier ifMintingEnabled{                                                                          // Can lock access to functions after "renounceMinting()" has been run
+        require(!minting_disabled, "Minting has been permanently disabled");
+        _;
+    }
+
+
+    ///// FUNCTIONS - Misc /////
+
+    function currentPrice() view public returns(uint256 price){
+        price = priceCurve[ IPOPS(POPS_address).totalSupply() / priceStep ];
+    }
+
+    ///// FUNCTIONS - Time /////
+
+    function configureSale(uint256 _unixTimestamp, uint256 _durationDays) public onlyOwner whenNotPaused returns(bool success){
+        saleStartTime = _unixTimestamp;
+        saleDuration = _durationDays * 1 days;
+    }
+
+    function saleDeadline() view public returns(uint256 deadline){
+        require(saleStartTime>0 && saleDuration>0, "Sale time has not been configured");
+        deadline = saleStartTime + saleDuration;
+    }
+
+    function saleRemaining() view public returns(uint256 deadline){
+        require(saleStartTime>0 && saleDuration>0, "Sale time has not been configured");
+        deadline = saleStartTime + saleDuration;
+    }
+
+
+    function buy(uint8 _amount, uint8 _goldenTicketsToRedeem) payable public ifMintingEnabled whenNotPaused nonReentrant returns(bool success){
+        require(block.timestamp >= saleStartTime, "Sale hasn't started yet");
+        require(_amount <= 10, "You cannot mint more than 10 POPS at once");
+        //uint256 ethOwed = 
+        require(msg.value > amount * currentPrice(), "Not sending enough eth");
     }
 
     /*
@@ -60,12 +119,14 @@ contract POPSsale is Ownable, Pausable, Whitelist, MintingRandomizer{
 
     // Adds a list of addresses to the whitelist - input as an array ["address1", "address2", ...]                  // The functions to check whitelist allowance and
     function addToWhitelist(address[] calldata _addresses) public onlyOwner whenNotPaused returns(bool success){    // use it are already derived from the base contract
+        require(block.timestamp < saleStartTime, "Sale has already started - whitelist permanently locked");
         batchWhitelist(_addresses, whitelistAllowance);
         success = true;
     }
 
 
     ///// TEAM WALLET EMERGENCY FUNCTIONS /////
+
     // Candidate new team wallet
     function teamWalletChange_setCandidate(address _newAddress) public onlyOwner {                                  // Only Owner can request this
         require (_newAddress != POPS_teamWallet);                                                                   // Ensure a new address is being proposed
