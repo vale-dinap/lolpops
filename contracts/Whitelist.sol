@@ -16,7 +16,7 @@ contract Whitelist{
     function batchWhitelist(address[] calldata _addresses, uint256 _allowance) internal virtual returns(bool){
         uint256 remainder = _addresses.length%16;
         for (uint256 index=0; index<(_addresses.length-remainder); index+=16){
-            whitelistAllowance[_addresses[index   ] ] = _allowance;
+            whitelistAllowance[_addresses[index    ] ] = _allowance;
             whitelistAllowance[_addresses[index + 1] ] = _allowance;
             whitelistAllowance[_addresses[index + 2] ] = _allowance;
             whitelistAllowance[_addresses[index + 3] ] = _allowance;
@@ -55,8 +55,14 @@ contract Whitelist{
 
     // Reduce allowance
     function _reduceWhitelistAllowance(address _address, uint256 _amount) internal virtual returns(bool){
-        if (_amount >= whitelistAllowance[_address]){delete whitelistAllowance[_address];}                      // Free up storage in exchange of gas discount
-        else {whitelistAllowance[_address] -= _amount;}
+        if (_amount >= whitelistAllowance[_address]){
+            delete whitelistAllowance[_address];                                                          // Free up storage in exchange of gas discount
+            whitelistTotalAllowance-=whitelistAllowance[_address];
+        }                      
+        else {
+            whitelistAllowance[_address] -= _amount;
+            whitelistTotalAllowance -= _amount;
+        }
         return true;
     }
 }
