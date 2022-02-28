@@ -16,7 +16,6 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   event RevealedBaseURI(uint8 indexed batchId, string indexed URI);
   event LockedBaseURI(uint8 indexed batchId);
-  event RoyaltiesAddressChanged(address newAddress);
 
 
   ///// CONTRACT VARIABLES /////
@@ -25,6 +24,9 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   bool public minting_disabled = false;                                                               // Once disabled, it is forever
   bool public provenance_locked = false;                                                              // Once locked, it is forever
   mapping(uint8 => bool) public baseURI_locked;                                                       // Once locked, it is forever (one per batch)
+  // Token data - timestamps
+  mapping(address => uint256) private pastCumulativeHODL;                                             // Stores how long a token has been hodl'd by a user
+  mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
   // Token data - main
   mapping(uint8 => string) public baseURI;                                                            // There are 20 base URIs instead of 1, (each holding data of 250 NFTs) - in combination with the randomized purchase and batch delayed revealing, this makes the system impossible to exploit
   uint256 public MAX_POPS;
@@ -33,9 +35,6 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   string public POPS_provenance = "";                                                                 // Final provenance hash
   // Addresses
   address public POPS_saleContract;                                                                   // Sale contract address
-  // Token data - timestamps
-  mapping(address => uint256) private pastCumulativeHODL;                                             // Stores how long a token has been hodl'd by a user
-  mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
 
 
   ///// MODIFIERS /////
@@ -93,7 +92,7 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   function setProvenance(string memory _hash, bool _lock) public onlyOwner {
     require(!provenance_locked, "The provenance hash has been locked forever");
     POPS_provenance = _hash;
-    if(_lock) lockProvenance();
+    if(_lock) lockProvenance();                                                                       // Also lock
   }
   function lockProvenance() public onlyOwner{                                                         // Lock provenance data forever
     require(!provenance_locked, "The provenance hash is already locked");
@@ -162,12 +161,6 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC2981Base) returns (bool){
     return super.supportsInterface(interfaceId);                                                      // ERC2981 IMPLEMENTATION
-  }
-
-  function updateRoyaltiesOwner(address newAddress) external onlySaleContract returns(bool success){  // Allows the sale contract to update the royalties address (requires the whole team to sign)
-    _setRoyalties(newAddress, 375);
-    emit RoyaltiesAddressChanged(newAddress);
-    success = true;
   }
 
 }
