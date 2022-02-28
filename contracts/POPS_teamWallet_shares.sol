@@ -36,6 +36,9 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     ///// WALLET VARIABLES /////
     mapping (address => uint256) dividends;                                                              // Accrued dividends for each shareholder
     uint256 dividendsToDistribute;
+    ///// EMERGENCY VARIABLES /////
+    address payable emergencyAddress;                                                                    // Address to send the funds to in case something goes really wrong. Needs the whole team to sign.
+    address[] emergencyWithdraw_signatories;
 
     ///// CONSTRUCTOR /////
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -151,11 +154,47 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
         return sent;
     }
 
+    ///// EMERGENCY FUNCTIONS /////
+    // Propose an emergency withdraw (the whole team must sign or no action will be performed)
+    function emergencyWithdraw_propose(address payable _withdrawTo) public onlyOwner {                    // Only Owner can request this
+        require (_withdrawTo != address(this) );                                                          // Ensure a new address is being proposed
+        emergencyAddress = _withdrawTo;
+        emergencyWithdraw_signatories = listShareholders();
+        removeAddressItem(emergencyWithdraw_signatories, msg.sender);                                     // Remove Owner from signatories (Owner's signature is implicit)
+    }
+    // Get proposed emergency address
+    function emergencyWithdraw_getAddress() view public returns(address){                                 // Show the current candidate
+        return (emergencyAddress);
+    }
+    // Get addresses required to sign in order to approve the withdraw                                    // Show the addresses required to sign in order to perform the change
+    function emergencyWithdraw_requiredSignatories() view public returns(address[] memory){
+        return(emergencyWithdraw_signatories);
+    }
+    // Approve emergency withdraw
+    function emergencyWithdraw_approve() public {
+        require(emergencyAddress != address(0) && emergencyAddress!=address(this));
+        if(!removeAddressItem(emergencyWithdraw_signatories, msg.sender)){ revert("Sender is not allowed to sign or has already signed"); }
+        if(emergencyWithdraw_signatories.length == 0){                                                    // If no signatories are left to sign,
+            (bool success, ) = emergencyAddress.call{value: address(this).balance}("");                   // perform the withdraw
+            delete emergencyAddress;                                                                      // Clear the emergency address variable
+        }
+    }
+    // Remove List Item
+    function removeAddressItem(address[] storage _list, address _item) private returns(bool success){     //Not a very efficient implementation but unlikely to run this function, ever
+        for(uint i=0; i<_list.length; i++){
+            if(_item == _list[i]){
+                _list[i]=_list[_list.length-1];
+                _list.pop();
+                success=true;
+                break;
+            }
+        }
+    }
+
     // Pause the contract
     function pauseContract() public onlyOwner {
         _pause();
     }
-
     // Unpause the contract
     function unpauseContract() public onlyOwner {
         _unpause();
