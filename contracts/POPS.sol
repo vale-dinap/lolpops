@@ -8,11 +8,6 @@ import "../node_modules/@openzeppelin/contracts/utils/Strings.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import './ERC2981/ERC2981ContractWideRoyalties.sol';
 
-///// TODO: integrate final provenance proofs
-///// TODO: reduce max supply to current supply after minting is over ----might edit the reounceMinting function
-///// TODO: consider getting rid of lockable variables where possible (eg provenance to avoid the reduce the amount of transactions)
-///// TODO: consider replacing setUnrevealedURI function with a hardcoded value
-
 contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   using Strings for uint256;
@@ -36,12 +31,11 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
   mapping(address => uint256) private pastCumulativeHODL;                                             // Stores how long a token has been hodl'd by a user
   // Provenance
-  string public POPS_provenance_imageFiles = "";                                                      // Hash of all image files hashes concatenated
-  string public POPS_provenance_imageFileCIDs = "";// TODO: CHECK IF NEEDED                           // Hash of all image files IPFS CIDs concatenated
+  string public POPS_provenance = "";                                                                 // Final provenance hash
   // Permissions
   mapping(uint8 => bool) public baseURI_locked;                                                       // Once locked, it is forever (one per batch)
   bool public minting_disabled = false;                                                               // Once disabled, it is forever
-  bool public provenanceData_locked = false;                                                          // Once locked, it is forever
+  bool public provenance_locked = false;                                                              // Once locked, it is forever
 
 
   ///// MODIFIERS /////
@@ -96,14 +90,14 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   ///// PROVENANCE FUNCTIONS /////
 
-  function setProvenance(string memory imageFilesHash, string memory imageCIDsHash) public onlyOwner {
-    require(!provenanceData_locked, "The provenance hash has been locked forever");
-    POPS_provenance_imageFiles = imageFilesHash;
-    POPS_provenance_imageFileCIDs = imageCIDsHash;
+  function setProvenance(string memory _hash, bool _lock) public onlyOwner {
+    require(!provenance_locked, "The provenance hash has been locked forever");
+    POPS_provenance = _hash;
+    if(_lock) lockProvenance();
   }
   function lockProvenance() public onlyOwner{                                                         // Lock provenance data forever
-    require(!provenanceData_locked, "The provenance hash is already locked");
-    provenanceData_locked=true;
+    require(!provenance_locked, "The provenance hash is already locked");
+    provenance_locked=true;
   }
 
 
