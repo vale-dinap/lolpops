@@ -26,7 +26,7 @@ contract POPSgoldenTickets is ERC20, Ownable {
     address immutable public POPS_sale_contract;
     
     // CONSTRUCTOR
-    constructor(string memory name, string memory symbol, address _POPS_sale_contract, address _POPS_contract) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, address _POPS_sale_contract, address _POPS_contract) Ownable() ERC20(name, symbol) {
         POPS_sale_contract = _POPS_sale_contract;
         POPS_contract = _POPS_contract;
         mintingEnabled = true;

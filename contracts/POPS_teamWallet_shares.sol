@@ -37,7 +37,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     mapping (address => bool) isShareholder;                                                             // Flags which addresses are shareholders
 
     ///// CONSTRUCTOR /////
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol) Ownable() ERC20(name, symbol) {
         _mint(msg.sender, 100 * 10 ** decimals());                                                       // Mint 10k shares - such amount is fixed
     }
 
