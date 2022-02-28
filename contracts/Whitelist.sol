@@ -54,10 +54,10 @@ contract Whitelist{
     }
 
     // Reduce allowance
-    function _reduceWhitelistAllowance(address _address, uint256 _amount) internal virtual returns(bool){
+    function _useWhitelistAllowance(address _address, uint256 _amount) internal virtual returns(bool){
         if (_amount >= whitelistAllowance[_address]){
             delete whitelistAllowance[_address];                                                          // Free up storage in exchange of gas discount
-            whitelistTotalAllowance-=whitelistAllowance[_address];
+            whitelistTotalAllowance-=whitelistAllowance[_address];                                        // Also update total allowance
         }                      
         else {
             whitelistAllowance[_address] -= _amount;
