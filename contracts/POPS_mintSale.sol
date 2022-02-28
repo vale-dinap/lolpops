@@ -19,11 +19,11 @@ interface IPOPS{
 }
 
 interface TeamWallet {
-  function listShareholders() external view returns(address[] memory);
+    function listShareholders() external view returns(address[] memory);
 }
 
 interface GoldenTicket {
-  function balanceOf(address account) external view returns(uint256);
+    function balanceOf(address account) external view returns(uint256);
 }
 
 contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRandomizer{
@@ -43,10 +43,8 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
     uint16 priceStep = 1800;                                                                                        // Price increase every N sales
     uint256[6] priceCurve = [0.08 ether, 0.083 ether, 0.09 ether, 0.103 ether, 0.121 ether, 0.144 ether];           // Prices have been pre-calculated algorithmically and hardcoded to reduce gas usage
     // Time
-    uint256 public saleStartTime;
-    uint256 public saleDuration;
-    // Permissions
-    bool public minting_disabled = false;                                                                           // Once disabled, it is forever
+    uint256 public saleStart;
+    uint256 public saleEnd;
 
     mapping(uint256 => bool) minted;
     uint256 requestId;
@@ -67,8 +65,16 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
 
     ///// MODIFIERS /////
 
-    modifier ifMintingEnabled{                                                                          // Can lock access to functions after "renounceMinting()" has been run
-        require(!minting_disabled, "Minting has been permanently disabled");
+    modifier onlyDuringSale{
+        require(block.timestamp >= saleStart, "Sale hasn't started yet");
+        require(block.timestamp <= saleEnd, "Sale is over");
+        _;
+    }
+
+    modifier useWhitelist{ ///// TODO: complete this
+        if(block.timestamp < (saleStart + whitelistValidity)){  /////// TODO: COMPLETE THIS
+
+        }
         _;
     }
 
@@ -79,29 +85,32 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
         price = priceCurve[ IPOPS(POPS_address).totalSupply() / priceStep ];
     }
 
+    function nonReserved() view private returns(uint32 amount){} /////// TODO: COMPLETE THIS
+
     ///// FUNCTIONS - Time /////
 
-    function configureSale(uint256 _unixTimestamp, uint256 _durationDays) public onlyOwner whenNotPaused returns(bool success){
-        saleStartTime = _unixTimestamp;
-        saleDuration = _durationDays * 1 days;
+    // Start the sale
+    function startSale(uint256 _duration_days) public onlyOwner whenNotPaused returns(bool success){
+        require(saleStart != 0, "Sale has already started");
+        saleStart = block.timestamp;
+        saleEnd = saleStart + (_duration_days * 1 days);
+        success = true;
+    }
+    // Get time left before sale ends
+    function sale_timeLeft() view public returns(uint256 time_left){
+        require(saleEnd>0, "Sale hasn't started yet");
+        if(saleEnd < block.timestamp){time_left = 0;}
+        else{time_left = saleEnd - block.timestamp;}
     }
 
-    function saleDeadline() view public returns(uint256 deadline){
-        require(saleStartTime>0 && saleDuration>0, "Sale time has not been configured");
-        deadline = saleStartTime + saleDuration;
-    }
-
-    function saleRemaining() view public returns(uint256 deadline){
-        require(saleStartTime>0 && saleDuration>0, "Sale time has not been configured");
-        deadline = saleStartTime + saleDuration;
-    }
-
-
-    function buy(uint8 _amount, uint8 _goldenTicketsToRedeem) payable public ifMintingEnabled whenNotPaused nonReentrant returns(bool success){
-        require(block.timestamp >= saleStartTime, "Sale hasn't started yet");
-        require(_amount <= 10, "You cannot mint more than 10 POPS at once");
-        //uint256 ethOwed = 
-        require(msg.value > amount * currentPrice(), "Not sending enough eth");
+    // Main mint function
+    function mint(uint8 _amount, uint8 _goldenTicketsToRedeem) payable public onlyDuringSale whenNotPaused nonReentrant returns(bool success){
+        require(_amount > 0 && _amount <= 10, "You cannot mint more than 10 POPS at once");
+        uint256 ethOwed; // placeholder
+        require(msg.value > ethOwed, "Please make sure to send enough eth");
+        (bool paid, ) = POPS_teamWallet.call{value: msg.value}("");
+        bool mintOk = true; // placeholder
+        success = (paid && mintOk);
     }
 
     /*
@@ -119,14 +128,19 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
 
     // Adds a list of addresses to the whitelist - input as an array ["address1", "address2", ...]                  // The functions to check whitelist allowance and
     function addToWhitelist(address[] calldata _addresses) public onlyOwner whenNotPaused returns(bool success){    // use it are already derived from the base contract
-        require(block.timestamp < saleStartTime, "Sale has already started - whitelist permanently locked");
+        require(block.timestamp < saleStart, "Sale has already started - whitelist permanently locked");
         batchWhitelist(_addresses, whitelistAllowance);
         success = true;
     }
 
 
-    ///// TEAM WALLET EMERGENCY FUNCTIONS /////
+    ///// EMERGENCY FUNCTIONS /////
 
+    // Manually forward to teamWallet any balance stuck in the contract                                             // Unlikely to ever use but better safe than sorry
+    function manualWithdraw() public onlyOwner whenPaused nonReentrant returns(bool success){
+        require(address(this).balance>0, "Nothing to withdraw");
+        (success, ) = POPS_teamWallet.call{value: address(this).balance}("");
+    }
     // Candidate new team wallet
     function teamWalletChange_setCandidate(address _newAddress) public onlyOwner {                                  // Only Owner can request this
         require (_newAddress != POPS_teamWallet);                                                                   // Ensure a new address is being proposed
@@ -134,11 +148,11 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
         candidateTeamWallet_signatories = TeamWallet(POPS_teamWallet).listShareholders();
         removeAddressItem(candidateTeamWallet_signatories, msg.sender);                                             // Remove Owner from signatories (Owner's signature is implicit)
     }
-    // Shows current candidate
+    // Get current candidate
     function teamWalletChange_getCandidate() view public returns(address){                                          // Show the current candidate
         return (candidateTeamWallet);
     }
-    // Show addresses required to sign in order to perform the change                                               // Show the addresses required to sign in order to perform the change
+    // Get addresses required to sign in order to approve the change                                               // Show the addresses required to sign in order to perform the change
     function teamWalletChange_requiredSignatories() view public returns(address[] memory){
         return(candidateTeamWallet_signatories);
     }
@@ -152,7 +166,7 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
         }
     }
     // Remove List Item
-    function removeAddressItem(address[] storage _list, address _item) internal returns(bool success){              //Not a very efficient implementation but unlikely to run this function, ever
+    function removeAddressItem(address[] storage _list, address _item) private returns(bool success){              //Not a very efficient implementation but unlikely to run this function, ever
         for(uint i=0; i<_list.length; i++){
             if(_item == _list[i]){
                 _list[i]=_list[_list.length-1];
@@ -162,5 +176,13 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
             }
         }
     }
+    // Pause the contract
+    function pauseContract() public onlyOwner {
+        _pause();
+    }
 
+    // Unpause the contract
+    function unpauseContract() public onlyOwner {
+        _unpause();
+    }
 }
