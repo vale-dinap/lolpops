@@ -21,21 +21,21 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   ///// CONTRACT VARIABLES /////
 
-  // Addresses
-  address public POPS_saleContract;                                                                   // Sale contract address
-  // Token data - main
-  uint256 public MAX_POPS;
-  mapping(uint8 => string) public baseURI;                                                            // There are 20 base URIs instead of 1, (each holding data of 250 NFTs) - in combination with the randomized purchase and batch delayed revealing, this makes the system impossible to exploit
-  string public unrevealedURI;                                                                        // URI to be used before reveal
-  // Token data - timestamps
-  mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
-  mapping(address => uint256) private pastCumulativeHODL;                                             // Stores how long a token has been hodl'd by a user
-  // Provenance
-  string public POPS_provenance = "";                                                                 // Final provenance hash
   // Permissions
-  mapping(uint8 => bool) public baseURI_locked;                                                       // Once locked, it is forever (one per batch)
   bool public minting_disabled = false;                                                               // Once disabled, it is forever
   bool public provenance_locked = false;                                                              // Once locked, it is forever
+  mapping(uint8 => bool) public baseURI_locked;                                                       // Once locked, it is forever (one per batch)
+  // Token data - main
+  mapping(uint8 => string) public baseURI;                                                            // There are 20 base URIs instead of 1, (each holding data of 250 NFTs) - in combination with the randomized purchase and batch delayed revealing, this makes the system impossible to exploit
+  uint256 public MAX_POPS;
+  string public unrevealedURI;                                                                        // URI to be used before reveal
+  // Provenance
+  string public POPS_provenance = "";                                                                 // Final provenance hash
+  // Addresses
+  address public POPS_saleContract;                                                                   // Sale contract address
+  // Token data - timestamps
+  mapping(address => uint256) private pastCumulativeHODL;                                             // Stores how long a token has been hodl'd by a user
+  mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
 
 
   ///// MODIFIERS /////
