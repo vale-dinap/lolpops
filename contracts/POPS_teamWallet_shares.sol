@@ -16,6 +16,7 @@ import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
+//import "./EmergencyWithdraw.sol";
 
 contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
 
@@ -28,17 +29,12 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     
     using SafeMath for uint256;
 
-    ///// TOKEN VARIABLES /////
-    address[] shareholders;                                                                              // Array keeping track of the shareholders
-    uint256[] shares;                                                                                    // Array keeping track of the shares, the indices will match with the shareholders list
-    mapping (address => uint256) shareholderIndex;                                                       // Shareholder index in the two arrays above
-    mapping (address => bool) isShareholder;                                                             // Flags which addresses are shareholders
-    ///// WALLET VARIABLES /////
-    mapping (address => uint256) dividends;                                                              // Accrued dividends for each shareholder
+    ///// VARIABLES /////
     uint256 dividendsToDistribute;
-    ///// EMERGENCY VARIABLES /////
-    address payable emergencyAddress;                                                                    // Address to send the funds to in case something goes really wrong. Needs the whole team to sign.
-    address[] emergencyWithdraw_signatories;
+    address[] shareholders;                                                                              // Array keeping track of the shareholders
+    mapping (address => uint256) shareholderIndex;                                                       // Shareholder index in the two arrays above
+    mapping (address => uint256) dividends;                                                              // Accrued dividends for each shareholder
+    mapping (address => bool) isShareholder;                                                             // Flags which addresses are shareholders
 
     ///// CONSTRUCTOR /////
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -55,9 +51,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
         require(isMinting || amount <= balanceOf(from), "The amount exceeds the sender's balance");      // Check if sender has enough funds
         distributeDividends();                                                                           // Distribute dividends before updating the shareholder list
         addShareholder(to);                                                                              // Add recipient to the shareholder list (the function performs no action if the address is already in the list)
-        shares[ shareholderIndex[to] ] = balanceOf(to) + amount;                                         // Update recipient's value in the shares array
         if(isMinting || amount == balanceOf( from )){ removeShareholder( from ); }                       // Remove sender from the shareholders if transfers all shares, does nothing if the transfer is a minting
-        else{shares[ shareholderIndex[ from ] ] = balanceOf( from ) - amount;}                           // Update sender's value in the shares array (if not zero)
         super._beforeTokenTransfer(from, to, amount);
     }
 
@@ -66,7 +60,6 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
         if(!isShareholder[newShareholder]){                                                              // Do if not a shareholder yet
             shareholderIndex[newShareholder] = shareholders.length;                                      // Store shareholder's index in array
             shareholders.push(newShareholder);                                                           // Append shareholder's address to array
-            shares.push(balanceOf(newShareholder));                                                      // Append shareholder's balance to array
             isShareholder[newShareholder]=true;                                                          // Flag the address as a shareholder
             emit AddedShareholder(newShareholder, shareholders);                                         // Emit event
             added=true;
@@ -78,10 +71,8 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     function removeShareholder(address shareholder) private returns(bool removed){
         if(isShareholder[shareholder]){                                                                  // Execute if the address is a shareholder
             shareholders[ shareholderIndex[shareholder] ] = shareholders[ shareholders.length - 1 ];     // Override item to be deleted with last item in array (address)
-            shares[ shareholderIndex[shareholder] ] = shares[ shareholders.length - 1 ];                 // Override item to be deleted with last item in array (balance)
             shareholderIndex[ shareholders[ shareholders.length - 1 ] ] = shareholderIndex[shareholder]; // Update index of the array item being "moved"
-            shareholders.pop();                                                                          // Remove last array item (address array)
-            shares.pop();                                                                                // Remove last array item (balance array)
+            shareholders.pop();                                                                          // Remove last array item
             isShareholder[shareholder] = false;                                                          // Flag address removed from array as NOT a shareholder
             emit RemovedShareholder(shareholder, shareholders);                                          // Emit event
             removed = true;
@@ -89,7 +80,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
         else{ removed=false; }                                                                           // Do nothing if not a shareholder
     }
 
-    // Get current amount of shareholders
+    // Get current number of shareholders
     function countShareholders() view public returns(uint count){
         count=shareholders.length;
     }
@@ -97,11 +88,6 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     // Get shareholders list
     function listShareholders() view public returns(address[] memory){
         return shareholders;
-    }
-
-    // Get shares list
-    function listShares() view public returns(uint256[] memory){
-        return shares;
     }
 
      // Get the total accrued dividends (aka contract's balance)
@@ -143,7 +129,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit PaymentReceived(msg.sender, msg.value);
     }
 
-    // Claim the accrued dividends
+    // Claim accrued dividends
     function claimDividends() public whenNotPaused nonReentrant returns(bool){
         require( accruedDividends(msg.sender)>0, "This address has no dividends to claim");
         distributeDividends();                                                                           // Make sure all dividends are distributed before claiming
@@ -154,42 +140,10 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
         return sent;
     }
 
-    ///// EMERGENCY FUNCTIONS /////
-    // Propose an emergency withdraw (the whole team must sign or no action will be performed)
-    function emergencyWithdraw_propose(address payable _withdrawTo) public onlyOwner {                    // Only Owner can request this
-        require (_withdrawTo != address(this) );                                                          // Ensure a new address is being proposed
-        emergencyAddress = _withdrawTo;
-        emergencyWithdraw_signatories = listShareholders();
-        removeAddressItem(emergencyWithdraw_signatories, msg.sender);                                     // Remove Owner from signatories (Owner's signature is implicit)
-    }
-    // Get proposed emergency address
-    function emergencyWithdraw_getAddress() view public returns(address){                                 // Show the current candidate
-        return (emergencyAddress);
-    }
-    // Get addresses required to sign in order to approve the withdraw                                    // Show the addresses required to sign in order to perform the change
-    function emergencyWithdraw_requiredSignatories() view public returns(address[] memory){
-        return(emergencyWithdraw_signatories);
-    }
-    // Approve emergency withdraw
-    function emergencyWithdraw_approve() public {
-        require(emergencyAddress != address(0) && emergencyAddress!=address(this));
-        if(!removeAddressItem(emergencyWithdraw_signatories, msg.sender)){ revert("Sender is not allowed to sign or has already signed"); }
-        if(emergencyWithdraw_signatories.length == 0){                                                    // If no signatories are left to sign,
-            (bool success, ) = emergencyAddress.call{value: address(this).balance}("");                   // perform the withdraw
-            delete emergencyAddress;                                                                      // Clear the emergency address variable
-        }
-    }
-    // Remove List Item
-    function removeAddressItem(address[] storage _list, address _item) private returns(bool success){     //Not a very efficient implementation but unlikely to run this function, ever
-        for(uint i=0; i<_list.length; i++){
-            if(_item == _list[i]){
-                _list[i]=_list[_list.length-1];
-                _list.pop();
-                success=true;
-                break;
-            }
-        }
-    }
+    // Emergency balance withdraw (full consensus from the whole team is required)
+    //function emergencyWithdraw_propose(address payable _withdrawTo) public onlyOwner{
+    //    super.emergencyWithdraw_start(_withdrawTo, shareholders);
+    //}
 
     // Pause the contract
     function pauseContract() public onlyOwner {
