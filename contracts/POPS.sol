@@ -22,17 +22,16 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   // Permissions
   bool public minting_disabled = false;                                                               // Once disabled, it is forever
-  bool public provenance_locked = false;                                                              // Once locked, it is forever
   mapping(uint8 => bool) public baseURI_locked;                                                       // Once locked, it is forever (one per batch)
   // Token data - timestamps
   mapping(address => uint256) private pastCumulativeHODL;                                             // Stores how long a token has been hodl'd by a user
   mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
   // Token data - main
-  mapping(uint8 => string) public baseURI;                                                            // There are 20 base URIs instead of 1, (each holding data of 250 NFTs) - in combination with the randomized purchase and batch delayed revealing, this makes the system impossible to exploit
+  mapping(uint8 => string) public baseURI;                                                            // There are 40 base URIs instead of 1, (each holding data of 250 NFTs) - in combination with the randomized purchase and batch delayed revealing, this makes the system impossible to exploit
   uint256 public MAX_POPS;
   string public unrevealedURI;                                                                        // URI to be used before reveal
-  // Provenance
-  string public POPS_provenance = "";                                                                 // Final provenance hash
+  // Provenance                                                                                       // Final provenance hash
+  string constant public POPS_provenance = "0a08d494d977e3ab4b4e7285c1521129db91da2192ef2c903c7af3e6e31e42f1";
   // Addresses
   address public POPS_saleContract;                                                                   // Sale contract address
 
@@ -46,11 +45,6 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   modifier ifBaseURIunlocked(uint8 URI_batchId){                                                      // Can deny access to functions if baseURI has been locked
     require(!baseURI_locked[URI_batchId], "The baseURI of this batch has been permanently locked");
-    _;
-  }
-
-  modifier onlySaleContract{
-    require(msg.sender == POPS_saleContract, "Access reserved to sale contract");
     _;
   }
 
@@ -70,7 +64,8 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
     POPS_saleContract = _saleContract;
   }
 
-  function mint(address to, uint256 tokenId) external virtual ifMintingEnabled onlySaleContract {     // Mint function used by the sale contarct
+  function mint(address to, uint256 tokenId) external virtual ifMintingEnabled {                      // Mint function used by the sale contarct
+    require(msg.sender == POPS_saleContract, "Access reserved to sale contract");
     _safeMint(to, tokenId);
   }
 
@@ -87,25 +82,12 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   }
 
 
-  ///// PROVENANCE FUNCTIONS /////
-
-  function setProvenance(string memory _hash, bool _lock) public onlyOwner {
-    require(!provenance_locked, "The provenance hash has been locked forever");
-    POPS_provenance = _hash;
-    if(_lock) lockProvenance();                                                                       // Also lock
-  }
-  function lockProvenance() public onlyOwner{                                                         // Lock provenance data forever
-    require(!provenance_locked, "The provenance hash is already locked");
-    provenance_locked=true;
-  }
-
-
   ///// TOKEN URI FUNCTIONS /////
 
   function setUnrevealedURI(string memory _unrevealedUri) public onlyOwner {
     unrevealedURI = _unrevealedUri;
   }
-  // Set base URI (by batch ID - 20 batches in total)
+  // Set base URI (by batch ID - 40 batches in total)
   function setBaseURI(string memory _URI, uint8 batchId, bool _lock) public onlyOwner ifBaseURIunlocked(batchId) {
     baseURI[batchId] = _URI;
     emit RevealedBaseURI(batchId, _URI);
