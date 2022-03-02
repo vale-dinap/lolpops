@@ -11,4 +11,6 @@ module.exports = async function (deployer) {
   await deployer.deploy(POPSsale, POPScontract.address, walletContract.address);
   let POPSsaleContract = await POPSsale.deployed();
   await deployer.deploy(POPSgoldenTicket, "LOLPOPS golden ticket", "POPSGT", POPSsaleContract.address, POPScontract.address);
+
+  POPScontract.prepareSale(POPSsaleContract.address);
 };
