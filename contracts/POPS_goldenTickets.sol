@@ -40,7 +40,7 @@ contract POPSgoldenTickets is ERC20, Ownable {
     // Mint function, takes an array of addresses as first argument. To mint to a single address, input an array with a single element.
     function mintTickets(address[] calldata _accounts, uint16 _amount) public onlyOwner{
         require(mintingEnabled == true, "Minting has been permanently disabled");
-        require(_amount <= IPOPS(POPS_contract).MAX_POPS() - IPOPS(POPS_contract).totalSupply(), "Attempting to mint a number of tickets greater than the amount of redeemable POPS");
+        require(_amount < 1+IPOPS(POPS_contract).MAX_POPS() - IPOPS(POPS_contract).totalSupply(), "Attempting to mint a number of tickets greater than the amount of redeemable POPS");
         for(uint256 i; i<_accounts.length; i++){
             _mint(_accounts[i], _amount);
         }
