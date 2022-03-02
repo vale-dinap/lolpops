@@ -13,6 +13,8 @@
   "author": "Valerio Di Napoli",
   "license": "MIT",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.2"
+    "@openzeppelin/contracts": "^4.4.2",
+    "keccak256": "^1.0.6",
+    "merkletreejs": "^0.2.30"
   }
 }
