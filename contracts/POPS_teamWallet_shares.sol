@@ -16,9 +16,9 @@ import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
-//import "./EmergencyWithdraw.sol";
+import "./EmergencyWithdraw.sol";
 
-contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
+contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyWithdraw {
 
     ///// TOKEN EVENTS /////
     event AddedShareholder(address indexed shareHolder, address[] shareholderList);
@@ -141,9 +141,9 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     // Emergency balance withdraw (full consensus from the whole team is required)
-    //function emergencyWithdraw_propose(address payable _withdrawTo) public onlyOwner{
-    //    super.emergencyWithdraw_start(_withdrawTo, shareholders);
-    //}
+    function emergencyWithdraw_propose(address payable _withdrawTo) public onlyOwner{
+        super.emergencyWithdraw_start(_withdrawTo, shareholders);
+    }
 
     // Pause the contract
     function pauseContract() public onlyOwner {
