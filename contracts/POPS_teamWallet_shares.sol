@@ -46,6 +46,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
         return 2;
     }
     
+    // [Tx][Internal] Override _beforeTokenTransfer to make sure accrued dividends are properly allocated before the shareholders change
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override{   // Also updates shareholders database
         bool isMinting = from == address(0);                                                             // Checks if the transaction is a minting
         require(isMinting || amount <= balanceOf(from), "The amount exceeds the sender's balance");      // Check if sender has enough funds
@@ -55,7 +56,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
         super._beforeTokenTransfer(from, to, amount);
     }
 
-    // Add new shareholder
+    // [Tx][Private] Add new shareholder
     function addShareholder(address newShareholder) private returns(bool added){
         if(!isShareholder[newShareholder]){                                                              // Do if not a shareholder yet
             shareholderIndex[newShareholder] = shareholders.length;                                      // Store shareholder's index in array
@@ -67,7 +68,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
         else{ added=false; }
     }
 
-    // Remove shareholder from database
+    // [Tx][Private] Remove shareholder from database
     function removeShareholder(address shareholder) private returns(bool removed){
         if(isShareholder[shareholder]){                                                                  // Execute if the address is a shareholder
             shareholders[ shareholderIndex[shareholder] ] = shareholders[ shareholders.length - 1 ];     // Override item to be deleted with last item in array (address)
@@ -80,32 +81,32 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
         else{ removed=false; }                                                                           // Do nothing if not a shareholder
     }
 
-    // Get current number of shareholders
+    // [View][Public] Get current number of shareholders
     function countShareholders() view public returns(uint count){
         count=shareholders.length;
     }
 
-    // Get shareholders list
+    // [View][Public] Get shareholders list
     function listShareholders() view public returns(address[] memory){
         return shareholders;
     }
 
-     // Get the total accrued dividends (aka contract's balance)
+     // [View][Public] Get the total accrued dividends (aka contract's balance)
     function totalAccruedDividends() view public returns(uint256){
         return address(this).balance;
     }
 
-    // Get the accrued dividends of the given shareholder
+    // [View][Public] Get the accrued dividends of the given shareholder
     function accruedDividends(address shareholder) view public returns(uint256 accrued){
         accrued = dividends[shareholder] + calculateDividend(shareholder, dividendsToDistribute);
     }
 
-    // Calculate dividend proportional to shares
+    // [View][Private] Calculate dividend proportional to shares
     function calculateDividend(address shareholder, uint256 value) view private returns(uint256 dividend){
         dividend = value.mul(balanceOf(shareholder)).div(100 * 10 ** decimals());
     }
 
-    // Distribute dividends
+    // [Tx][Private] Distribute dividends
     function distributeDividends() private returns(bool){
         if(dividendsToDistribute>0){
             uint256 dividendsToDistribute_before = dividendsToDistribute;                                // Used at the end to check invariances
@@ -123,13 +124,13 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
         else{return false;}
     }
 
-    // Fallback for incoming payments
+    // [Fallback] Fallback for incoming payments
     receive() external payable nonReentrant {
         dividendsToDistribute+=msg.value;
         emit PaymentReceived(msg.sender, msg.value);
     }
 
-    // Claim accrued dividends
+    // [Tx][Public] Claim accrued dividends
     function claimDividends() public whenNotPaused nonReentrant returns(bool){
         require( accruedDividends(msg.sender)>0, "This address has no dividends to claim");
         distributeDividends();                                                                           // Make sure all dividends are distributed before claiming
@@ -140,16 +141,16 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
         return sent;
     }
 
-    // Emergency balance withdraw (full consensus from the whole team is required)
+    // [Tx][Public] Emergency balance withdraw (full consensus from the whole team is required)
     function emergencyWithdraw_propose(address payable _withdrawTo) public onlyOwner{
         super.emergencyWithdraw_start(_withdrawTo, shareholders);
     }
 
-    // Pause the contract
+    // [Tx][Public] Pause the contract
     function pauseContract() public onlyOwner {
         _pause();
     }
-    // Unpause the contract
+    // [Tx][Public] Unpause the contract
     function unpauseContract() public onlyOwner {
         _unpause();
     }

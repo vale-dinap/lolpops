@@ -33,11 +33,11 @@ contract POPSgoldenTickets is ERC20, Ownable {
     }
 
     // FUNCTIONS
-    // Overriding the decimals function - no decimals are needed
+    // [Pure][Public] Overriding the decimals function - no decimals are needed
     function decimals() public pure override returns (uint8) {
         return 0;
     }
-    // Mint function, takes an array of addresses as first argument. To mint to a single address, input an array with a single element.
+    // [Tx][Public][Owner] Mint function, takes an array of addresses as first argument. To mint to a single address, input an array with a single element.
     function mintTickets(address[] calldata _accounts, uint16 _amount) public onlyOwner{
         require(mintingEnabled == true, "Minting has been permanently disabled");
         require(_amount < 1+IPOPS(POPS_contract).MAX_POPS() - IPOPS(POPS_contract).totalSupply(), "Attempting to mint a number of tickets greater than the amount of redeemable POPS");
@@ -45,13 +45,13 @@ contract POPSgoldenTickets is ERC20, Ownable {
             _mint(_accounts[i], _amount);
         }
     }
-    // Burn tickets, only the sale contract can access this. Holders can get rid of tokens by sending them to blackhole address
+    // [Tx][External] Burn tickets, only the sale contract can access this. Holders can get rid of tokens by sending them to blackhole address
     function burnTickets(address account, uint16 amount) external returns (bool){
         require(msg.sender == POPS_sale_contract, "Access denied");
         _burn(account, amount);
         return true;
     }
-    // Disable minting forever
+    // [Tx][Public][Owner] Disable minting forever
     function renounceMinting() public onlyOwner {
         require(mintingEnabled == true, "Minting has been already disabled");
         mintingEnabled=false;

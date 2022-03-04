@@ -8,6 +8,8 @@ import "../node_modules/@openzeppelin/contracts/utils/Strings.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import './ERC2981/ERC2981ContractWideRoyalties.sol';
 
+//TODO: consider replacing unreveal URI function with hardcoded value
+
 contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   using Strings for uint256;
@@ -59,23 +61,23 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   ///// MINTING FUNCTIONS /////
 
+  // [Tx][Public][Owner]
   function prepareSale(address _saleContract) public onlyOwner ifMintingEnabled {                     // Links the external sale contract
     require(POPS_saleContract == address(0));                                                         // Once set, can't be overridden
     POPS_saleContract = _saleContract;
   }
-
+  // [Tx][External]
   function mint(address to, uint256 tokenId) external virtual ifMintingEnabled {                      // Mint function used by the sale contarct
     require(msg.sender == POPS_saleContract, "Access reserved to sale contract");
     _safeMint(to, tokenId);
   }
-
+  // [Tx][Public][Owner]
   function renounceMinting() public onlyOwner ifMintingEnabled {                                      // Warning: disables minting forever
     POPS_saleContract = address(0);                                                                   // Unlink sale contract addess
     MAX_POPS = totalSupply();                                                                         // Override max supply with current supply
     minting_disabled = true;                                                                          // Flag minting as disabled
   }
-
-  // Add supply cap to _safeMint function
+  // [Tx][Internal] Add supply cap to _safeMint function
   function _safeMint(address to, uint256 tokenId) internal virtual override {
     require(tokenId < MAX_POPS, "Max supply");                                                        // Ensures this mint doesn't exceed max supply
     super._safeMint(to, tokenId);                                                                     // Base contract's _safeMint
@@ -84,32 +86,33 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   ///// TOKEN URI FUNCTIONS /////
 
-  function setUnrevealedURI(string memory _unrevealedUri) public onlyOwner {
+  // [Tx][Public][Owner]
+  function setUnrevealedURI(string calldata _unrevealedUri) public onlyOwner {
     unrevealedURI = _unrevealedUri;
   }
-  // Set base URI (by batch ID - 40 batches in total)
-  function setBaseURI(string memory _URI, uint8 batchId, bool _lock) public onlyOwner ifBaseURIunlocked(batchId) {
+  // [Tx][Public][Owner] Set base URI (by batch ID - 40 batches in total)
+  function setBaseURI(string calldata _URI, uint8 batchId, bool _lock) public onlyOwner ifBaseURIunlocked(batchId) {
     baseURI[batchId] = _URI;
     emit RevealedBaseURI(batchId, _URI);
     if(_lock) lockBaseURI(batchId);                                                                   // Optionally, also lock the URI
   }
-  // Lock Base URI forever
+  // [Tx][Public][Owner] Lock Base URI forever
   function lockBaseURI(uint8 batchId) public onlyOwner ifBaseURIunlocked(batchId) {
     baseURI_locked[batchId] = true;
     emit LockedBaseURI(batchId);
   }
-  // Get Base URI
+  // [View][Internal] Get Base URI
   function _baseURI(uint8 batchId) internal view virtual returns (string memory) {
     return baseURI[batchId];
   }
-  // Actual function to get the final URI (also used by Opensea etc.)
+  // [View][Public] Actual function to get the final URI (also used by Opensea etc.)
   function tokenURI(uint256 _tokenId) public view override returns (string memory){
     bool revealed = abi.encode(baseURI[getURIbatchId(_tokenId)]).length > 0;                          // If the base URI is empty, consider the token as NOT revealed,
     if (!revealed) { return unrevealedURI; }                                                          // then return the alternative URI
     require(_exists(_tokenId), "ERC721Metadata: URI query for nonexistent token");                    // Check if the token exists
     return string(abi.encodePacked(baseURI[getURIbatchId(_tokenId)], (_tokenId + 1).toString()));     // Retrieve the base URI and combine it with the token ID to return the final token URI
   }
-  // Retrieve batch ID from token ID
+  // [Pure][Private] Retrieve batch ID from token ID
   function getURIbatchId(uint256 tokenId) pure private returns(uint8 batchId){
     batchId = uint8((tokenId-(tokenId%250))/250);
   }
@@ -117,6 +120,7 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
   ///// HODL TIMESTAMP FUNCTIONS /////
   
+  // [Tx][Internal]
   function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
     super._beforeTokenTransfer(from, to, tokenId);                                                    // Run base contract's beforeTokenTransfer function
     uint256 timeHodld = block.timestamp - lastTransferTimestamp[tokenId];                             // Compute how long the token has been held by the address "from"
@@ -125,7 +129,7 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
     }
     lastTransferTimestamp[tokenId] = block.timestamp;                                                 // Override the last transfer timestamp with the current time
   }
-  // Get Cumulative HODL
+  // [View][Public] Get Cumulative HODL
   function cumulativeHODL(address user) public view returns (uint256) {                               // Return how long the user has hodl'd the tokens in his wallet cumulatively
     uint256 _cumulativeHODL = pastCumulativeHODL[user];
     uint256 bal = balanceOf(user);
@@ -141,6 +145,7 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   ///// ROYALTIES FUNCTIONS /////
   // (these only apply where ERC2981 is supported)
 
+  // [View][Public]
   function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC2981Base) returns (bool){
     return super.supportsInterface(interfaceId);                                                      // ERC2981 IMPLEMENTATION
   }
