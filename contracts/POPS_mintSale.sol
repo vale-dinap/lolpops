@@ -22,7 +22,7 @@ interface GoldenTicket{
     function totalSupply() view external returns(uint256);
 }
 
-contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRandomizer{
+contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMinting{
 
 
     ///// CONTRACT VARIABLES /////
@@ -117,11 +117,16 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
     function buy(uint8 _amount, bool _useGT, bytes32[] calldata _whitelist_merkleProof) payable public onlyDuringSale whenNotPaused nonReentrant useWhitelist(msg.sender, _amount, _whitelist_merkleProof) returns(bool success){
         require(_amount > 0 && _amount < 11, "You can mint 1 to 10 POPS at once");
         require(_amount < 1+availablePOPS(), "Mint would exceed max supply");
+        // Calculate price (use GT is any)
         uint8 credits;
-        if (_useGT) credits = useGoldenTickets(msg.sender, _amount);                                       // Spend golden tickets
+        if (_useGT) credits = useGoldenTickets(msg.sender, _amount);                                      // Spend golden tickets
         uint256 salePrice = currentPrice()*(_amount - credits);                                           // Calculate sale price
+        // Forward payment to the team wallet
         require(msg.value >= salePrice, "Please make sure to send enough eth");
         (bool paid, ) = POPS_teamWallet.call{value: address(this).balance}("");                           // Forward ether to the teamWallet address. By sending contract balance instead of msg.value, we ensure that also value that previously got stuck in the contract due to unforseen circumstances is sent, for the same gas cost
+        // Actual mint starts here
+        _shuffle();
+
         //// TODO: add actual randomize and mint functions here
         bool mintOk = true; // placeholder
         success = (paid && mintOk);
@@ -139,6 +144,9 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, MintingRando
         requestId+=1;
     }
     */
+
+    // Multiple mint - TODO: build this
+    //function mintMulti(){}
 
     // [Tx][Public][Owner] Pause the contract
     function pauseContract() public onlyOwner {
