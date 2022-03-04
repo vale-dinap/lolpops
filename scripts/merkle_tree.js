@@ -17,3 +17,4 @@ const rootHash = merkleTree.getRoot();
 
 console.log(leafNodes);
 console.log(merkleTree);
+console.log(rootHash);
