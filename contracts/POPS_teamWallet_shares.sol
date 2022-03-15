@@ -6,7 +6,7 @@ token holder receives a revenue proportional to the amount of tokens. The total 
 10000, with 2 decimals), so the address holding 10 tokens will receive 10% of the revenues, the address
 holding 7.5 tokens will receive 7.5% of the revenues and so on. By using this approach, shareholders
 are free to transfer their shares to other wallets (or even trade them), the new holders will
-automatically start earing the dividends from new earnings as soon as they receive the tokens.
+automatically start earning dividends from new sales as soon as they receive the tokens.
 */
 
 pragma solidity ^0.8.0;
@@ -24,7 +24,6 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
     event AddedShareholder(address indexed shareHolder, address[] shareholderList);
     event RemovedShareholder(address indexed shareHolder, address[] shareholderList);
     ///// WALLET EVENTS /////
-    event PaymentReceived(address, uint);
     event DividendsClaimed(address indexed, uint);
     
     using SafeMath for uint256;
@@ -127,7 +126,6 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
     // [Fallback] Fallback for incoming payments
     receive() external payable nonReentrant {
         dividendsToDistribute+=msg.value;
-        emit PaymentReceived(msg.sender, msg.value);
     }
 
     // [Tx][Public] Claim accrued dividends
