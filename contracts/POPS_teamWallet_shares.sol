@@ -41,7 +41,7 @@ contract POPSteamWallet is ERC20, Ownable, Pausable, ReentrancyGuard, EmergencyW
     }
 
     ///// FUNCTIONS /////
-    function decimals() public pure override returns (uint8) {                                           // Overloading the decimals function
+    function decimals() public pure override returns (uint8) {                                           // Override the decimals function
         return 2;
     }
     
