@@ -8,9 +8,6 @@ import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./Whitelist.sol";
 import "./MintingRandomizer.sol";
 
-// TODO: multiple mints at once
-// TODO: optimize gas costs
-
 interface POPS_nft{
     function mint(address to, uint256 tokenId) external;
     function totalSupply() view external returns(uint256);
@@ -90,20 +87,24 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
     function currentPrice() view public returns(uint256 price){
         price = priceCurve[ POPS_nft(POPS_address).totalSupply() / priceStep ];
     }
+
     // [View][Public] Get available POPS
     function availablePOPS() view public returns(uint256 available){
         available= 10000 - POPS_nft(POPS_address).totalSupply();
     }
+
     // [View][Private] Get non reserved POPS (WL + GT)
     function nonReserved() view private returns(uint256 amount){
         amount = availablePOPS();
         if(duringGTvalidity()) {amount -= GoldenTicket(POPS_goldenTicket).totalSupply();}
         if(block.timestamp < (saleStart + (1 days * whitelist_validity))){ amount  -= getWhitelistTotalAllowance();}
     }
+
     // [View][Public] Check if currently during golden tickets validity
     function duringGTvalidity() view public returns(bool result){
         result = (block.timestamp < (saleStart + (1 days * goldenTicketsValidity) ) );
     }
+
     // [Tx][Private] Redeem golden tickets
     function useGoldenTickets(address buyer, uint8 requested) private returns(uint8 credits){
         if ( duringGTvalidity() ){                                                                        // If during validity,
@@ -113,40 +114,24 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
         }
         else{credits = 0;}                                                                                // Return zero credits if GT are expired
     }
-    // [Tx][Public] Main buy function
-    function buy(uint8 _amount, bool _useGT, bytes32[] calldata _whitelist_merkleProof) payable public onlyDuringSale whenNotPaused nonReentrant useWhitelist(msg.sender, _amount, _whitelist_merkleProof) returns(bool success){
+
+    // [Tx][Public] Main buy/mint function
+    function buy(uint8 _amount, bool _useGT, bytes32[] calldata _whitelist_merkleProof) payable public onlyDuringSale whenNotPaused nonReentrant useWhitelist(msg.sender, _amount, _whitelist_merkleProof){
         require(_amount > 0 && _amount < 11, "You can mint 1 to 10 POPS at once");
         require(_amount < 1+availablePOPS(), "Mint would exceed max supply");
-        // Calculate price (use GT is any)
-        uint8 credits;
-        if (_useGT) credits = useGoldenTickets(msg.sender, _amount);                                      // Spend golden tickets
+        // Calculate price (use GT if any available)
+        uint8 credits;                                                                                    // Initialize variable holding the amount of spent golden tickets
+        if (_useGT) credits = useGoldenTickets(msg.sender, _amount);                                      // Spend golden tickets (if during validity)
         uint256 salePrice = currentPrice()*(_amount - credits);                                           // Calculate sale price
         // Forward payment to the team wallet
         require(msg.value >= salePrice, "Please make sure to send enough eth");
         (bool paid, ) = POPS_teamWallet.call{value: address(this).balance}("");                           // Forward ether to the teamWallet address. By sending contract balance instead of msg.value, we ensure that also value that previously got stuck in the contract due to unforseen circumstances is sent, for the same gas cost
-        // Actual mint starts here
+        // Actual mint
         _shuffle();
-
-        //// TODO: add actual randomize and mint functions here
-        bool mintOk = true; // placeholder
-        success = (paid && mintOk);
-    }
-
-    /*
-    function drawMint() public{
-        _setMinterById(_nextMinterId(), msg.sender);
-        minterRequestBlock[nextMinterId] = block.number;
-        _shuffle();
-        _setNextMinterId();
-        if(!minted[requestId-2]){
-            //_mint(_minterById(_nextMinterId()), _useMintId(0, MAX_POPS) );
+        for(uint8 n=0; n<_amount; n++){
+            POPS_nft(POPS_address).mint(msg.sender, _useIdForMint(n, 10000) );
         }
-        requestId+=1;
     }
-    */
-
-    // Multiple mint - TODO: build this
-    //function mintMulti(){}
 
     // [Tx][Public][Owner] Pause the contract
     function pauseContract() public onlyOwner {
