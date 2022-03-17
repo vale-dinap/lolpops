@@ -6,7 +6,7 @@ import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "../node_modules/@openzeppelin/contracts/security/Pausable.sol";
 import "../node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./Whitelist.sol";
-import "./MintingRandomizer.sol";
+import "./RandomizeMinting.sol";
 
 interface POPS_nft{
     function mint(address to, uint256 tokenId) external;
