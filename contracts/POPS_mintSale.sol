@@ -127,9 +127,11 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
         require(msg.value >= salePrice, "Please make sure to send enough eth");
         (bool paid, ) = POPS_teamWallet.call{value: address(this).balance}("");                           // Forward ether to the teamWallet address. By sending contract balance instead of msg.value, we ensure that also value that previously got stuck in the contract due to unforseen circumstances is sent, for the same gas cost
         // Actual mint
-        _shuffle();
-        for(uint8 n=0; n<_amount; n++){
-            POPS_nft(POPS_address).mint(msg.sender, _useIdForMint(n, 10000) );
+        if(paid) {
+            _shuffle();
+            for(uint8 n=0; n<_amount; n++){
+                POPS_nft(POPS_address).mint(msg.sender, _useIdForMint(n, 10000) );
+            }
         }
     }
 
