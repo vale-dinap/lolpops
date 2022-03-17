@@ -8,7 +8,6 @@ pragma solidity ^0.8.0;
 
 contract Whitelist{
 
-    uint8 internal whitelist_validity = 4;                                                                // In days
     uint8 whitelist_allowance = 2;                                                                        // Allowance per address
     uint16 private whitelist_totalAllowance;                                                              // Total allowance of whitelist, set via constructor
     mapping(address => uint8) whitelist_claimed;                                                          // Tracks whitelist addresses that have already claimed

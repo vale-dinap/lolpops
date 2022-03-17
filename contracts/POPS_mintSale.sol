@@ -24,7 +24,8 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
 
     ///// CONTRACT VARIABLES /////
 
-    uint8 goldenTicketsValidity = 2;                                                                      // In days
+    uint8 public whitelist_validity = 4;                                                                  // In days
+    uint8 public goldenTickets_validity = 2;                                                              // In days
     uint16 priceStep = 1800;                                                                              // Number of sales to increase the price
     uint256 public saleStart;                                                                             // Unix timestamp
     uint256 public saleEnd;                                                                               // Unix timestamp
@@ -53,11 +54,11 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
         require(block.timestamp < saleEnd, "Sale is over");
         _;
     }
-    // Use whitelist functionality during its validity
-    modifier useWhitelist (address buyer, uint8 amount, bytes32[] calldata merkleProof){
+    // Use whitelist (during validity)
+    modifier useWhitelist (address account, uint8 amount, bytes32[] calldata merkleProof){
         if(block.timestamp < (saleStart + (1 days * whitelist_validity) )){
-            require(amount < 1 + getWhitelistAllowance(buyer, merkleProof) + nonReserved(), "Request exceeds allowance (whitelist + non_reserved)");
-            _useWhitelistAllowance(buyer, amount, merkleProof);
+            require(amount < 1 + getWhitelistAllowance(account, merkleProof) + nonReserved(), "Request exceeds allowance (whitelist + non_reserved)");
+            _useWhitelistAllowance(account, amount, merkleProof);
         }
         _;
     }
@@ -89,20 +90,20 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
     }
 
     // [View][Public] Get available POPS
-    function availablePOPS() view public returns(uint256 available){
+    function availableToMint() view public returns(uint256 available){
         available= 10000 - POPS_nft(POPS_address).totalSupply();
     }
 
-    // [View][Private] Get non reserved POPS (WL + GT)
+    // [View][Private] Get amount of non reserved POPS (WL + GT)
     function nonReserved() view private returns(uint256 amount){
-        amount = availablePOPS();
+        amount = availableToMint();
         if(duringGTvalidity()) {amount -= GoldenTicket(POPS_goldenTicket).totalSupply();}
         if(block.timestamp < (saleStart + (1 days * whitelist_validity))){ amount  -= getWhitelistTotalAllowance();}
     }
 
-    // [View][Public] Check if currently during golden tickets validity
+    // [View][Public] Check if during golden tickets validity
     function duringGTvalidity() view public returns(bool result){
-        result = (block.timestamp < (saleStart + (1 days * goldenTicketsValidity) ) );
+        result = (block.timestamp < (saleStart + (1 days * goldenTickets_validity) ) );
     }
 
     // [Tx][Private] Redeem golden tickets
@@ -112,13 +113,13 @@ contract POPSsale is Ownable, Pausable, ReentrancyGuard, Whitelist, RandomizeMin
             credits = (available < requested ? available : requested);                                    // If requested more than available, use all available
             if(credits>0) GoldenTicket(POPS_goldenTicket).burnTickets(buyer, credits);                    // Burn used tickets
         }
-        else{credits = 0;}                                                                                // Return zero credits if GT are expired
+        else{credits = 0;}                                                                                // If GT are expired, do nothing and return zero credits
     }
 
     // [Tx][Public] Main buy/mint function
     function buy(uint8 _amount, bool _useGT, bytes32[] calldata _whitelist_merkleProof) payable public onlyDuringSale whenNotPaused nonReentrant useWhitelist(msg.sender, _amount, _whitelist_merkleProof){
         require(_amount > 0 && _amount < 11, "You can mint 1 to 10 POPS at once");
-        require(_amount < 1+availablePOPS(), "Mint would exceed max supply");
+        require(_amount < 1+availableToMint(), "Mint would exceed max supply");
         // Calculate price (use GT if any available)
         uint8 credits;                                                                                    // Initialize variable holding the amount of spent golden tickets
         if (_useGT) credits = useGoldenTickets(msg.sender, _amount);                                      // Spend golden tickets (if during validity)

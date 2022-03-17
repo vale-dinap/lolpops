@@ -8,7 +8,7 @@ import "../node_modules/@openzeppelin/contracts/utils/Strings.sol";
 import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import './ERC2981/ERC2981ContractWideRoyalties.sol';
 
-//TODO: consider replacing unreveal URI function with hardcoded value
+//TODO: consider replacing unrevealed URI function with hardcoded value
 
 contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
 
@@ -30,7 +30,7 @@ contract lolpops is Ownable, ERC721Enumerable, ERC2981ContractWideRoyalties {
   mapping(uint256 => uint256) public lastTransferTimestamp;                                           // Stores the last time a token has been transferred
   // Token data - main
   mapping(uint8 => string) public baseURI;                                                            // There are 40 base URIs instead of 1, (each holding data of 250 NFTs) - in combination with the randomized purchase and batch delayed revealing, this makes the system impossible to exploit
-  uint256 public MAX_POPS;
+  uint256 public MAX_POPS;                                                                            // Max supply
   string public unrevealedURI;                                                                        // URI to be used before reveal
   // Provenance                                                                                       // Final provenance hash
   string constant public POPS_provenance = "0a08d494d977e3ab4b4e7285c1521129db91da2192ef2c903c7af3e6e31e42f1";

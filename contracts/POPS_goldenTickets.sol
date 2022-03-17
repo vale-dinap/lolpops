@@ -17,9 +17,6 @@ interface IPOPS{
 
 contract POPSgoldenTickets is ERC20, Ownable {
 
-    // EVENTS
-    event MintingDisabled();
-
     // CONTRACT VARIABLES
     bool mintingEnabled;
     address immutable public POPS_contract;
@@ -55,6 +52,5 @@ contract POPSgoldenTickets is ERC20, Ownable {
     function renounceMinting() public onlyOwner {
         require(mintingEnabled == true, "Minting has been already disabled");
         mintingEnabled=false;
-        emit MintingDisabled();
     }
 }
