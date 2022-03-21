@@ -9,7 +9,7 @@ contract RandomizeMinting{
     // VARIABLES
     uint8 private rollId;                                                                          // Adds entropy by keeping track of the current dice roll
     uint16 private nextMintableId=10;                                                              // Value that will replace the just-minted ID in the mintableId array
-    uint16[] private mintableIds = [0,1,2,3,4,5,6,7,8,9];                                          // Initialize the array containing the final metadata ids, this is randomized at each draw
+    uint16[] private mintableIds = [0,1,2,3,4,5,6,7,8,9];                                          // Initialize the array containing the currently mintable ids, this is randomized and updated at each mint
 
 
     // FUNCTIONS
