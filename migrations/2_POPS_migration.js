@@ -12,5 +12,5 @@ module.exports = async function (deployer) {
   let POPSsaleContract = await POPSsale.deployed();
   await deployer.deploy(POPSgoldenTicket, "LOLPOPS golden ticket", "POPSGT", POPSsaleContract.address, POPScontract.address);
 
-  POPScontract.prepareSale(POPSsaleContract.address);
+  //POPScontract.prepareSale(POPSsaleContract.address);
 };
