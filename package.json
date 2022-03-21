@@ -14,7 +14,11 @@
   "license": "MIT",
   "dependencies": {
     "@openzeppelin/contracts": "^4.4.2",
+    "dotenv": "^16.0.0",
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.2.30"
+  },
+  "devDependencies": {
+    "truffle-plugin-verify": "^0.5.24"
   }
 }

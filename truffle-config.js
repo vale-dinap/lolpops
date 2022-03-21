@@ -23,6 +23,8 @@
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
+require('dotenv').config()
+
 module.exports = {
   /**
    * Networks define how you connect to your ethereum client and let you set the
@@ -113,4 +115,11 @@ module.exports = {
     //   }
     // }
   // }
+
+  plugins: ['truffle-plugin-verify'],
+
+  api_keys: {
+    etherscan: process.env.ETHERSCAN_API_KEY
+  }
+  
 };
