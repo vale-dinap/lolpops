@@ -2,7 +2,7 @@
 
 // Base contract for whitelist
 
-import "../node_modules/@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 pragma solidity ^0.8.0;
 

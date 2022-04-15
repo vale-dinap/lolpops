@@ -7,8 +7,8 @@ When a golden ticket is used, 1 token unit is burnt.
 
 pragma solidity ^0.8.0;
 
-import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IPOPS{
     function MAX_POPS() view external returns(uint256);
